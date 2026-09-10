@@ -216,12 +216,38 @@ class Parser:
         raise ParserError(self.peek(), STATEMENT_START)
 
     def parse_id_or_call_statement(self) -> Stmt:
+        #Consome o token, ele entra aqui só se for já o identifier, 
+        start = self.expect(TokenKind.IDENTIFIER)
+        #se for o '=' 
+        if self.match(TokenKind.ASSIGN):
+            target= IdentifierExpr(start.lexmee, span=self._token_span(start))
+            #le as expressões dentro 
+            value= self.parse_expression()
+            #end normalmente sempre vai ser o ';'.
+            end= self.expect(TokenKind.SEMICOLON)
+            return Assignment(target, value, span=self._span(start, end))
+        #se for o '('
+        if self.match(TokenKind.LEFT_PAREN):
+            #le argumentos implementar
+            arguments = self.parse_arguments()
+            #esperando o ')'
+            right_parent = self.expect(TokenKind.RIGHT_PAREN)
+            # CallExpr  nome e arg. A diferença entre o Call Expr e o Stmt é que o statment envelopa o dado do Expr, deixando concatenar
+            call =  CallExpr(start.lexeme, arguments, start=self._span(token,end))
+            end = self.expect(TokenKind.SEMICOLON)
+            return CallStmt(call, span=self._span(start,end))
+
         raise NotImplementedError("implemente id_or_call_statement")
 
     def parse_declaration(self) -> Stmt:
         raise NotImplementedError("implemente declaration")
 
     def parse_if_statement(self) -> Stmt:
+        #if_statement ::= XKW_IF xLEFT_PAREN xexpression xRIGHT_PAREN block (KW_ELSE block)?
+        start = self.expec(TokenKind.KW_if)
+        self.expect(TokenKind.LEFT_PAREN)
+        expression = self.parse_expression()
+        self.expect(TokenKind.RIGHT_PAREN)
         raise NotImplementedError("implemente if_statement")
 
     def parse_while_statement(self) -> Stmt:
