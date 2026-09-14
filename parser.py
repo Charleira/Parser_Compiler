@@ -244,13 +244,42 @@ class Parser:
 
     def parse_if_statement(self) -> Stmt:
         #if_statement ::= XKW_IF xLEFT_PAREN xexpression xRIGHT_PAREN block (KW_ELSE block)?
-        start = self.expec(TokenKind.KW_if)
+        start = self.expect(TokenKind.KW_IF)
         self.expect(TokenKind.LEFT_PAREN)
         expression = self.parse_expression()
         self.expect(TokenKind.RIGHT_PAREN)
+        #agora cobrir o else e o return
+        #essa coisa é pq ele não chama antes, esse seria o "then"
+        #havia me esquecido disso quando tava mechendo antes
+        thenBlock= self.parse_block()
+
+        elseBlock = None
+        #se tiver um else é isso que verifica, mas antes a gente inicia ele "vazio"
+        #provavelmente tem uma forma mais efetiva de fazer isso
+        if self.match(TokenKind.KW_ELSE):
+            elseBlock= self.parse_block()
+
+        #to deixando bastante espaço pq essa parte não tenho certeza do end
+        #pelo que entendo
+        #o end do span tem que ser o último bloco/token usado, então esse tem como ser dois
+        #então separamo em dois.
+        if elseBlock is not None:
+            end = elseBlock
+        else:
+            end = thenBlock
+        
+        return IforElseStmt(expression, thenBlock, elseBlock, span=self._span(start, end))
         raise NotImplementedError("implemente if_statement")
 
     def parse_while_statement(self) -> Stmt:
+        #while_statement ::= KW_WHILE LEFT_PAREN expression RIGHT_PAREN block
+        start = self.expect(TokenKind.KW_WHILE)
+        self.expect(TokenKind.LEFT_PAREN)
+        expression = self.parse_expression()
+        self.expect(TokenKind.RIGHT_PAREN)
+        whileBlock= self.parse_block()
+
+        return WhileStmt(expression, whileBlock, span=self._span(start,whileBlock))
         raise NotImplementedError("implemente while_statement")
 
     def parse_return_statement(self) -> Stmt:
