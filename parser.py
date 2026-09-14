@@ -283,6 +283,16 @@ class Parser:
         raise NotImplementedError("implemente while_statement")
 
     def parse_return_statement(self) -> Stmt:
+        #return_statement ::= KW_RETURN expression? SEMICOLON
+        start = self.expect(TokenKind.KW_RETURN)
+
+        #OK, return pode não ter nada, então
+        expression = None
+        #se for semicollon quer dizer que meu mano só deu um return; então expression é vazia
+        if self.peek().kind != TokenKind.SEMICOLON:
+            expression = self.parse_expression()
+        end = self.expect(TokenKind.SEMICOLON)
+        return ReturnStmt(expression, span=self._span(start, end))
         raise NotImplementedError("implemente return_statement")
 
     def parse_print_statement(self) -> Stmt:
