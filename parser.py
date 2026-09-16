@@ -15,6 +15,14 @@ from ast_nodes import (
     Stmt,
     StringLiteral,
     TypeName,
+    IdentifierExpr,
+    Assignment,
+    CallExpr,
+    CallStmt,
+    WhileStmt,
+    IfStmt,
+    ReturnStmt,
+    PrintStmt,
 )
 
 
@@ -216,11 +224,12 @@ class Parser:
         raise ParserError(self.peek(), STATEMENT_START)
 
     def parse_id_or_call_statement(self) -> Stmt:
+        #id_or_call_statement ::= IDENTIFIER (ASSIGN expression | LEFT_PAREN arguments RIGHT_PAREN) SEMICOLON
         #Consome o token, ele entra aqui só se for já o identifier, 
         start = self.expect(TokenKind.IDENTIFIER)
         #se for o '=' 
         if self.match(TokenKind.ASSIGN):
-            target= IdentifierExpr(start.lexmee, span=self._token_span(start))
+            target= IdentifierExpr(start.lexeme, span=self._token_span(start))
             #le as expressões dentro 
             value= self.parse_expression()
             #end normalmente sempre vai ser o ';'.
@@ -233,7 +242,7 @@ class Parser:
             #esperando o ')'
             right_parent = self.expect(TokenKind.RIGHT_PAREN)
             # CallExpr  nome e arg. A diferença entre o Call Expr e o Stmt é que o statment envelopa o dado do Expr, deixando concatenar
-            call =  CallExpr(start.lexeme, arguments, start=self._span(token,end))
+            call =  CallExpr(start.lexeme, arguments, start=self._span(start,end))
             end = self.expect(TokenKind.SEMICOLON)
             return CallStmt(call, span=self._span(start,end))
 
@@ -268,7 +277,7 @@ class Parser:
         else:
             end = thenBlock
         
-        return IforElseStmt(expression, thenBlock, elseBlock, span=self._span(start, end))
+        return IfStmt(expression, thenBlock, elseBlock, span=self._span(start, end))
         raise NotImplementedError("implemente if_statement")
 
     def parse_while_statement(self) -> Stmt:
@@ -296,18 +305,37 @@ class Parser:
         raise NotImplementedError("implemente return_statement")
 
     def parse_print_statement(self) -> Stmt:
+        #print_statement ::= KW_PRINT LEFT_PAREN print_item (COMMA print_item)* RIGHT_PAREN SEMICOLON
+        lista = []
+        # KW_PRINT LEFT_PAREN print_item
+        start = self.expect(TokenKind.KW_PRINT)
+        self.expect(TokenKind.LEFT_PAREN)
+        lista.append(self.parse_print_item)
+
+        while self.peek().kind == TokenKind.COMMA:
+            self.expect(TokenKind.COMMA)
+            lista.append(self.parse_print_item())
+        self.expect(TokenKind.RIGHT_PAREN)
+
+        end = self.expect(TokenKind.SEMICOLON)
+        return PrintStmt(lista, span=self._span(start,end))
         raise NotImplementedError("implemente print_statement")
 
     def parse_print_item(self) -> PrintItem:
+        #print_item ::= expression | string_literals
         raise NotImplementedError("implemente print_item")
 
     def parse_string_literals(self) -> StringLiteral:
         raise NotImplementedError("implemente string_literals")
 
     def parse_expression(self) -> Expr:
+        #expression ::= logical_or
+        #ESSE É TIPO, SÓ CHAMAR O LOGICAL OR? WTF
+        return self.parse_logical_or()
         raise NotImplementedError("implemente expression")
 
     def parse_logical_or(self) -> Expr:
+        #logical_or ::= logical_and (LOGICAL_OR logical_and)*
         raise NotImplementedError("implemente logical_or")
 
     def parse_logical_and(self) -> Expr:
@@ -332,5 +360,20 @@ class Parser:
         raise NotImplementedError("implemente primary")
 
     def parse_arguments(self) -> list[Expr]:
+        #arguments ::= (expression (COMMA expression)*)?
+        arguments = []
+        #ok aqu se ele achar o ) ele só para e já devolve vazia pq não tem argumentos
+        if self.peek().kind != TokenKind.RIGHT_PAREN:
+            #ele consome argumetno
+            arguments.append(self.parse_expression())
+            #pode ter mais que um argumento ,entaõ enquanto tiver , ele consome
+            while self.peek().kind == TokenKind.COMMA:
+                #consome o ,
+                self.expect(TokenKind.COMMA)
+                #le o próximo argumetno
+                arguments.append(self.parse_expression())
+
+        #tem como retornar os argumentos vazios
+        return arguments
         raise NotImplementedError("implemente arguments")
 
