@@ -443,9 +443,10 @@ class Parser:
         token = self.peek()
 
         if token.kind == TokenKind.LEFT_PAREN:
-            self.advance()
+            left_paren = self.advance()
             expr = self.parse_expression()
-            self.expect(TokenKind.RIGHT_PAREN)
+            right_paren = self.expect(TokenKind.RIGHT_PAREN)
+            expr.span = self._span(left_paren, right_paren)  # amplia o span, sem criar nó novo
             return expr
 
         if token.kind == TokenKind.IDENTIFIER:
