@@ -15,14 +15,6 @@ from ast_nodes import (
     Stmt,
     StringLiteral,
     TypeName,
-    IdentifierExpr,
-    Assignment,
-    CallExpr,
-    CallStmt,
-    WhileStmt,
-    IfStmt,
-    ReturnStmt,
-    PrintStmt,
 )
 
 
@@ -310,7 +302,7 @@ class Parser:
         # KW_PRINT LEFT_PAREN print_item
         start = self.expect(TokenKind.KW_PRINT)
         self.expect(TokenKind.LEFT_PAREN)
-        lista.append(self.parse_print_item)
+        lista.append(self.parse_print_item())
 
         while self.peek().kind == TokenKind.COMMA:
             self.expect(TokenKind.COMMA)
