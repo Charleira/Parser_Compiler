@@ -153,6 +153,15 @@ class Lexer:
         if ch == "\n":
             self._line += 1
             self._column = 1
+        elif ch == "\r":
+            #peek pq a gente tem que ver se é \r\n ou só \r 
+            if self._peek() == "\n":
+                #'\r\n' conta como UMA quebra de linha só, quem muda a linha é o '\n'm por isso ele quebra
+                self._column += 1
+            else:
+                # '\r' sozinho também é uma quebra de linha alem de cfoluna
+                self._line += 1
+                self._column = 1
         else:
             self._column += 1
         return ch
@@ -168,13 +177,21 @@ class Lexer:
         while not self._at_end():
             ch = self._peek()
 
-            if ch in (" ", "\t", "\n"):
+            if ch in (" ", "\t", "\n", "\r"):
                 self._advance()
                 continue
 
             if ch == "/" and self._peek(1) == "/":
                 # comentário de linha: descarta até (sem incluir) a quebra de linha ou EOF
-                while not self._at_end() and self._peek() != "\n":
+                #nota: mudado da versão anterior para incluir o \r também
+                while not self._at_end() and self._peek() not in ("\n", "\r"):
+                    #verifcando se é ascii
+                    if not self._peek().isascii():
+                        raise LexerError(
+                            f"Caractere não é ASCII",
+                            self._line,
+                            self._column,
+                        )
                     self._advance()
                 continue
 
@@ -247,13 +264,12 @@ class Lexer:
 
             ch = self._peek()
 
-            if ch == "\n":
+            if ch in ("\n", "\r"):
                 raise LexerError(
                     "quebra de linha não permitida em string literal",
                     self._line,
                     self._column,
                 )
-
             if ch == '"':
                 raw.append(self._advance())
                 break
@@ -261,27 +277,40 @@ class Lexer:
             if ch == "\\":
                 bs_line, bs_col = self._line, self._column
                 raw.append(self._advance())  # consome a barra invertida
-
-                if self._at_end() or self._peek() == "\n":
+ 
+                if self._at_end():
+                    # barra no fim da entrada: a string simplesmente não terminou
+                    raise LexerError(
+                        "string literal não terminada (EOF)", start_line, start_col
+                    )
+ 
+                if self._peek() in ("\n", "\r"):
                     raise LexerError(
                         "sequência de escape inválida", bs_line, bs_col
                     )
-
+ 
                 esc_ch = self._peek()
                 decoded = _STRING_ESCAPES.get(esc_ch)
                 if decoded is None:
                     raise LexerError(
                         "sequência de escape inválida", bs_line, bs_col
                     )
-
+ 
                 raw.append(self._advance())
                 value.append(decoded)
                 continue
-
+ 
+            if not ch.isascii():
+                raise LexerError(
+                    f"caractere não ASCII {ch!r} em string literal",
+                    self._line,
+                    self._column,
+                )
+ 
             raw.append(ch)
             value.append(ch)
             self._advance()
-
+ 
         lexeme = "".join(raw)
         decoded_value = "".join(value)
         return Token(TokenKind.STRING_LITERAL, lexeme, decoded_value, start_line, start_col)
